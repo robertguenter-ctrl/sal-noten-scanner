@@ -1,6 +1,9 @@
 /**
  * SAL Noten-Scanner PWA – Kamera + OCR + BL-Promotionslogik
- * Rechnung immer mit kaufmännisch auf ½ gerundeten Zeugnisnoten (wie Bookmarklet).
+ *
+ * Pro Fach:
+ *  - Live/Scan (nur Anzeige, aus OCR)
+ *  - Zeugnisnote (editierbar, vorausgefüllt mit kaufm. ½-Rundung) → allein massgebend für die Rechnung
  */
 
 const SUBJECTS = [
@@ -38,15 +41,18 @@ const statsEl = $("stats");
 
 let stream = null;
 let levelCode = "E";
-/** Live-Notendurchschnitt pro Fach (null = keine Note / leer) */
-let grades = Object.fromEntries(SUBJECTS.map((s) => [s.key, null]));
+
+/** @type {Record<string, { live: number|null, zeugnis: number|null }>} */
+let grades = Object.fromEntries(
+  SUBJECTS.map((s) => [s.key, { live: null, zeugnis: null }])
+);
 
 function setStatus(msg, kind) {
   statusEl.textContent = msg;
   statusEl.className = "status" + (kind ? " " + kind : "");
 }
 
-/** Kaufmännische Rundung auf ½-Note (= Zeugnisnote) */
+/** Kaufmännische Rundung auf ½-Note (= prognostizierte Zeugnisnote) */
 function roundHalf(v) {
   return Math.round(Number(v) * 2) / 2;
 }
@@ -55,17 +61,11 @@ function round2(v) {
   return Math.round(Number(v) * 100) / 100;
 }
 
-function fmt1(n) {
+function fmt(n, digits) {
+  if (n == null || Number.isNaN(n)) return "–";
   return Number(n).toLocaleString("de-CH", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  });
-}
-
-function fmt3(n) {
-  return Number(n).toLocaleString("de-CH", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 3,
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
   });
 }
 
@@ -73,7 +73,6 @@ function parseGradeToken(raw) {
   if (raw == null) return null;
   let s = String(raw).trim();
   if (!s) return null;
-  // Explizit leer / keine Note
   if (/^(--+|–+|—+|\.|n\.?\s*b\.?|disp\.?|dispensiert)$/i.test(s)) return null;
   s = s.replace(/\*/g, "").replace(",", ".");
   if (/^-+$/.test(s)) return null;
@@ -93,20 +92,14 @@ function normalize(s) {
     .trim();
 }
 
-function isEmptyMark(text) {
-  const t = normalize(text).replace(/\*/g, "");
-  return !t || /^(--+|–+|—+|\.|n\.?\s*b\.?|disp|dispensiert)$/.test(t);
-}
-
 function isOnlyGradeLine(line) {
   const t = String(line || "").trim();
-  if (isEmptyMark(t)) return false;
+  if (!t || /^(--+|–+|—+)$/.test(t)) return false;
   return /^[1-6][.,]\d{1,3}\s*\*?$/.test(t);
 }
 
 function matchSubjectLine(line) {
   const nLine = normalize(line);
-  // Kurscode am Anfang: D-3Ed-… / B-3Ed-… (nicht GG, eaBO, wpf…)
   for (const s of SUBJECTS) {
     const re = new RegExp("^" + s.code + "-\\d[ep][a-z]", "i");
     if (re.test(line.trim())) return s;
@@ -120,12 +113,6 @@ function matchSubjectLine(line) {
   return null;
 }
 
-/**
- * Konservatives OCR-Parsing:
- * - Note nur wenn in derselben Fachzeile ODER nächste Zeile eine reine Note ist
- * - "--" / leere Markierungen → kein Treffer
- * - kein „Note irgendwo in der Nähe stehlen“ über den ganzen Text
- */
 function parseOcrText(text) {
   const found = Object.fromEntries(SUBJECTS.map((s) => [s.key, null]));
   const lines = String(text)
@@ -138,7 +125,6 @@ function parseOcrText(text) {
     const subject = matchSubjectLine(line);
     if (!subject || found[subject.key] != null) continue;
 
-    // Leermarkierung in derselben Zeile → bewusst keine Note
     if (/(?:^|\s)(--+|–+|—+)(?:\s|$)/.test(line) && !/([1-6][.,]\d{1,3})/.test(line)) {
       continue;
     }
@@ -155,20 +141,28 @@ function parseOcrText(text) {
       const g = parseGradeToken(next);
       if (g != null) found[subject.key] = g;
     }
-    // Sonst leer lassen – lieber manuell als falsch
   }
 
   return found;
 }
 
-function computePromotion(rawGrades, level) {
+/** Aus OCR-Live-Werten Startzustand bauen (Zeugnis = gerundet, editierbar) */
+function applyOcrLives(liveMap) {
+  for (const s of SUBJECTS) {
+    const live = liveMap[s.key];
+    grades[s.key] = {
+      live: live,
+      zeugnis: live == null ? null : roundHalf(live),
+    };
+  }
+}
+
+function computePromotion(level) {
   const profile = LEVELS[level] || LEVELS.E;
-  // Immer zuerst auf Zeugnisnote (½) runden – nie mit Rohdurchschnitt rechnen
   const present = SUBJECTS.map((s) => {
-    const live = rawGrades[s.key];
-    if (live == null) return { ...s, live: null, grade: null, found: false };
-    const grade = roundHalf(live);
-    return { ...s, live, grade, found: true };
+    const z = grades[s.key].zeugnis;
+    if (z == null) return { ...s, grade: null, live: grades[s.key].live, found: false };
+    return { ...s, grade: z, live: grades[s.key].live, found: true };
   });
   const missing = present.filter((s) => !s.found);
   const withGrades = present.filter((s) => s.found);
@@ -239,74 +233,54 @@ function computePromotion(rawGrades, level) {
 
 function renderGradeInputs() {
   gradeList.innerHTML = SUBJECTS.map((s) => {
-    const live = grades[s.key];
-    const zeugnis = live == null ? null : roundHalf(live);
+    const { live, zeugnis } = grades[s.key];
     return `
     <li>
       <div class="grade-meta">
-        <label for="g-${s.key}">${s.label}${s.doubleWeight ? " (×2)" : ""}</label>
-        <small class="zeugnis" data-zeugnis-for="${s.key}">
-          ${
-            zeugnis == null
-              ? "Zeugnisnote: – (leer = keine Note)"
-              : "Zeugnisnote: " + fmt1(zeugnis) + (live !== zeugnis ? " ← Live " + fmt3(live) : "")
-          }
+        <label for="z-${s.key}">${s.label}${s.doubleWeight ? " (×2)" : ""}</label>
+        <small class="live-readout">
+          Scan/Live: <strong>${live == null ? "–" : fmt(live, 3)}</strong>
         </small>
       </div>
       <div class="grade-edit">
-        <input id="g-${s.key}" inputmode="decimal" placeholder="leer"
-          value="${live == null ? "" : String(live).replace(".", ",")}"
-          aria-label="${s.label} Live-Note" />
-        <button type="button" class="clear" data-clear="${s.key}" title="Feld leeren">✕</button>
+        <input id="z-${s.key}" inputmode="decimal" placeholder="leer"
+          value="${zeugnis == null ? "" : String(zeugnis).replace(".", ",")}"
+          aria-label="${s.label} Zeugnisnote" />
+        <button type="button" class="clear" data-clear="${s.key}" title="Zeugnisnote leeren">✕</button>
       </div>
     </li>`;
   }).join("");
 
   gradeList.querySelectorAll("input").forEach((input) => {
     input.addEventListener("input", () => {
-      const key = input.id.replace(/^g-/, "");
-      grades[key] = parseGradeToken(input.value);
-      updateZeugnisHint(key);
-      // Noch nicht auto-berechnen bei jedem Tastendruck – nur Hinweis aktualisieren
+      const key = input.id.replace(/^z-/, "");
+      grades[key].zeugnis = parseGradeToken(input.value);
+      // Live/Scan unverändert lassen
     });
   });
 
   gradeList.querySelectorAll("[data-clear]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const key = btn.getAttribute("data-clear");
-      grades[key] = null;
-      const input = $("g-" + key);
+      grades[key].zeugnis = null;
+      // Live bleibt sichtbar (Scan-Info), nur Zeugnis wird geleert
+      const input = $("z-" + key);
       if (input) input.value = "";
-      updateZeugnisHint(key);
       renderStats();
     });
   });
 }
 
-function updateZeugnisHint(key) {
-  const live = grades[key];
-  const el = gradeList.querySelector(`[data-zeugnis-for="${key}"]`);
-  if (!el) return;
-  if (live == null) {
-    el.textContent = "Zeugnisnote: – (leer = keine Note)";
-    return;
-  }
-  const z = roundHalf(live);
-  el.textContent =
-    "Zeugnisnote: " + fmt1(z) + (live !== z ? " ← Live " + fmt3(live) : "");
-}
-
 function readInputs() {
   for (const s of SUBJECTS) {
-    const el = $("g-" + s.key);
-    grades[s.key] = parseGradeToken(el && el.value);
+    const el = $("z-" + s.key);
+    grades[s.key].zeugnis = parseGradeToken(el && el.value);
   }
 }
 
 function renderStats() {
   readInputs();
-  SUBJECTS.forEach((s) => updateZeugnisHint(s.key));
-  const data = computePromotion(grades, levelCode);
+  const data = computePromotion(levelCode);
   if (!data.complete) {
     statsEl.innerHTML = `
       <div class="stat" style="grid-column:1/-1">
@@ -321,7 +295,7 @@ function renderStats() {
   }
 
   const roundedList = data.all
-    .map((s) => `${s.label} ${fmt1(s.grade)}`)
+    .map((s) => `${s.label} ${fmt(s.grade, 1)}`)
     .join(" · ");
 
   const overall = data.gym.promoOk
@@ -331,8 +305,8 @@ function renderStats() {
       : { cls: "warn", label: "Gefährdet / nicht erfüllt" };
 
   statsEl.innerHTML = `
-    <div class="stat"><div class="k">Schnitt (½-Noten)</div><div class="v">${data.average.toFixed(2)}</div></div>
-    <div class="stat"><div class="k">Punkte (½-Noten)</div><div class="v">${data.points.toFixed(1)}</div></div>
+    <div class="stat"><div class="k">Schnitt (Zeugnis)</div><div class="v">${data.average.toFixed(2)}</div></div>
+    <div class="stat"><div class="k">Punkte (Zeugnis)</div><div class="v">${data.points.toFixed(1)}</div></div>
     <div class="stat"><div class="k">Status</div><div class="v"><span class="badge ${overall.cls}">${overall.label}</span></div></div>
     <div class="stat"><div class="k">${data.profile.label}</div><div class="v" style="font-size:0.95rem">FMS ${data.fms.statusLabel}<br>Gym ${data.gym.statusLabel}</div></div>
     <div class="stat" style="grid-column:1/-1">
@@ -387,8 +361,9 @@ async function takePhotoAndScan() {
       },
     });
     const text = result.data.text || "";
-    grades = parseOcrText(text);
-    const hits = Object.values(grades).filter((g) => g != null).length;
+    const liveMap = parseOcrText(text);
+    applyOcrLives(liveMap);
+    const hits = Object.values(grades).filter((g) => g.live != null).length;
     renderGradeInputs();
     $("captureCard").classList.add("hidden");
     $("resultCard").classList.remove("hidden");
@@ -396,8 +371,8 @@ async function takePhotoAndScan() {
     setStatus(
       hits
         ? hits +
-            " Noten erkannt. Leere Fächer = keine Note (✕ zum Löschen). Rechnung nutzt ½-Zeugnisnoten."
-        : "Keine Noten erkannt – Felder manuell ausfüllen. Leer lassen, wenn noch keine Note.",
+            " Live-Noten erkannt. Rechts: editierbare Zeugnisnote (½). Leer = noch keine Note (✕)."
+        : "Keine Noten erkannt – Zeugnisnoten rechts manuell eintragen.",
       hits ? "ok" : "error"
     );
   } catch (err) {

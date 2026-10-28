@@ -166,11 +166,17 @@ button:disabled {
   font-weight: 650;
 }
 
-.grades .zeugnis {
+.grades .live-readout {
   display: block;
   margin-top: 0.15rem;
   color: var(--muted);
   font-size: 0.75rem;
+}
+
+.grades .live-readout strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
 }
 
 .grade-edit {
