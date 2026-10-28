@@ -1,5 +1,5 @@
 /* Minimal offline shell for the SAL Noten-Scanner PWA */
-const CACHE = "sal-noten-scanner-v3";
+const CACHE = "sal-noten-scanner-v4";
 const ASSETS = [
   "/",
   "/index.html",

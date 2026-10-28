@@ -278,6 +278,96 @@ function readInputs() {
   }
 }
 
+function clamp01(x) {
+  return Math.max(0, Math.min(1, x));
+}
+
+function pctOnScale(value, min, max) {
+  return clamp01((value - min) / (max - min)) * 100;
+}
+
+/** Zwei horizontale Skalen: Schnitt + Punkte mit FMS/Gym-Schwellen und Ist-Marker */
+function renderScalesHtml(data) {
+  const avgMin = 3.5;
+  const avgMax = 6.0;
+  const ptsMin = 28;
+  const ptsMax = 48; // 6+6+6+6+6+6 mit D/M doppelt = 48
+
+  const fmsAvg = data.fms.minAverage;
+  const gymAvg = data.gym.minAverage;
+  const fmsPts = data.fms.minPoints;
+  const gymPts = data.gym.minPoints;
+
+  const sameAvgThreshold = Math.abs(fmsAvg - gymAvg) < 0.05;
+
+  function scaleBlock(opts) {
+    const { title, unit, min, max, value, marks } = opts;
+    const valuePct = pctOnScale(value, min, max);
+    const marksHtml = marks
+      .map((m) => {
+        const left = pctOnScale(m.value, min, max);
+        return `
+          <div class="scale-mark scale-mark--${m.kind}" style="left:${left}%">
+            <span class="scale-tick"></span>
+            <span class="scale-mark-label">${m.label}<br>${m.value}${unit}</span>
+          </div>`;
+      })
+      .join("");
+
+    return `
+      <div class="scale">
+        <div class="scale-head">
+          <span class="scale-title">${title}</span>
+          <span class="scale-value">${value.toFixed(unit === "" ? 2 : 1)}${unit}</span>
+        </div>
+        <div class="scale-track" role="img" aria-label="${title}: ${value}">
+          <div class="scale-fill" style="width:${valuePct}%"></div>
+          ${marksHtml}
+          <div class="scale-now" style="left:${valuePct}%">
+            <span class="scale-now-dot"></span>
+            <span class="scale-now-label">Ist</span>
+          </div>
+        </div>
+        <div class="scale-ends"><span>${min}${unit}</span><span>${max}${unit}</span></div>
+      </div>`;
+  }
+
+  const avgMarks = sameAvgThreshold
+    ? [{ kind: "both", label: "FMS/Gym", value: fmsAvg }]
+    : [
+        { kind: "fms", label: "FMS", value: fmsAvg },
+        { kind: "gym", label: "Gym", value: gymAvg },
+      ];
+
+  return `
+    <div class="scales" style="grid-column:1/-1">
+      ${scaleBlock({
+        title: "Notenschnitt",
+        unit: "",
+        min: avgMin,
+        max: avgMax,
+        value: data.average,
+        marks: avgMarks,
+      })}
+      ${scaleBlock({
+        title: "Punktetotal",
+        unit: "",
+        min: ptsMin,
+        max: ptsMax,
+        value: data.points,
+        marks: [
+          { kind: "fms", label: "FMS", value: fmsPts },
+          { kind: "gym", label: "Gym", value: gymPts },
+        ],
+      })}
+      <div class="scale-legend">
+        <span><i class="lg fms"></i> FMS-Schwelle</span>
+        <span><i class="lg gym"></i> Gym-Schwelle</span>
+        <span><i class="lg now"></i> aktueller Stand</span>
+      </div>
+    </div>`;
+}
+
 function renderStats() {
   readInputs();
   const data = computePromotion(levelCode);
@@ -313,6 +403,7 @@ function renderStats() {
       <div class="k">Verwendete Zeugnisnoten</div>
       <div class="k" style="margin-top:0.35rem;text-transform:none;letter-spacing:0;font-size:0.82rem;color:var(--text)">${roundedList}</div>
     </div>
+    ${renderScalesHtml(data)}
   `;
 }
 
