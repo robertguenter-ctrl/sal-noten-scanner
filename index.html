@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>SAL Noten-Scanner</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+</head>
+<body>
+  <main>
+    <h1>SAL Noten-Scanner</h1>
+    <p class="sub">Foto der Laptop-Notenübersicht → OCR → Promotionscheck (BL)</p>
+
+    <section class="card" id="captureCard">
+      <div class="preview">
+        <video id="video" playsinline muted autoplay></video>
+        <img id="shot" class="shot hidden" alt="Aufnahme" />
+        <canvas id="canvas" class="hidden"></canvas>
+        <div class="frame-guide" aria-hidden="true"></div>
+      </div>
+      <div class="actions">
+        <button type="button" class="secondary" id="startCam">Kamera</button>
+        <button type="button" class="primary" id="snap" disabled>Foto</button>
+      </div>
+      <p class="status" id="status">Kamera starten, Notentabelle im Rahmen ausrichten, Foto machen.</p>
+    </section>
+
+    <section class="card hidden" id="resultCard">
+      <div class="level-toggle" role="group" aria-label="Leistungszug">
+        <button type="button" data-level="E" class="active">Zug E</button>
+        <button type="button" data-level="P">Zug P</button>
+      </div>
+
+      <ul class="grades" id="gradeList"></ul>
+
+      <div class="actions">
+        <button type="button" class="secondary" id="rescan">Neu scannen</button>
+        <button type="button" class="primary" id="recalc">Berechnen</button>
+      </div>
+
+      <div class="stats" id="stats" style="margin-top:0.85rem"></div>
+      <p class="hint">Erkennung bitte prüfen und bei Bedarf korrigieren — OCR vom Bildschirm ist nie 100 % sicher.</p>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="/app.js" type="module"></script>
+</body>
+</html>
