@@ -146,22 +146,41 @@ button:disabled {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.45rem;
+  gap: 0.65rem;
 }
 
 .grades li {
   display: grid;
-  grid-template-columns: 1fr 88px;
+  grid-template-columns: 1fr auto;
   gap: 0.5rem;
   align-items: center;
 }
 
+.grades .grade-meta {
+  min-width: 0;
+}
+
 .grades label {
+  display: block;
   font-size: 0.92rem;
+  font-weight: 650;
+}
+
+.grades .zeugnis {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.grade-edit {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 
 .grades input {
-  width: 100%;
+  width: 88px;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: #0b1220;
@@ -169,6 +188,17 @@ button:disabled {
   padding: 0.55rem 0.6rem;
   font: inherit;
   font-variant-numeric: tabular-nums;
+}
+
+.grades button.clear {
+  min-height: 40px;
+  width: 40px;
+  padding: 0;
+  border-radius: 10px;
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  font-weight: 700;
 }
 
 .stats {
