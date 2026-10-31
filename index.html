@@ -14,7 +14,7 @@
 <body>
   <main>
     <h1>SAL Noten-Scanner</h1>
-    <p class="sub">Foto der Laptop-Notenübersicht → OCR → Promotionscheck (BL)</p>
+    <p class="sub">Foto der Laptop-Notenübersicht → OCR → BL-Laufbahncheck</p>
 
     <section class="card" id="captureCard">
       <div class="preview">
@@ -31,9 +31,33 @@
     </section>
 
     <section class="card hidden" id="resultCard">
-      <div class="level-toggle" role="group" aria-label="Leistungszug">
-        <button type="button" data-level="E" class="active">Zug E</button>
-        <button type="button" data-level="P">Zug P</button>
+      <p class="mode-label" id="modeLabel">Modus wird erkannt…</p>
+
+      <div class="toggle-row">
+        <span class="toggle-caption">Klasse</span>
+        <div class="level-toggle" role="group" aria-label="Klassenjahr">
+          <button type="button" data-year="1">1.</button>
+          <button type="button" data-year="2">2.</button>
+          <button type="button" data-year="3" class="active">3.</button>
+        </div>
+      </div>
+
+      <div class="toggle-row">
+        <span class="toggle-caption">Zug</span>
+        <div class="level-toggle" role="group" aria-label="Leistungszug">
+          <button type="button" data-level="A">A</button>
+          <button type="button" data-level="E" class="active">E</button>
+          <button type="button" data-level="P">P</button>
+        </div>
+      </div>
+
+      <div class="toggle-row" id="empfRow">
+        <span class="toggle-caption">Empfehlung Konvent (§45&nbsp;a)</span>
+        <div class="level-toggle" role="group" aria-label="Empfehlung Klassenkonvent">
+          <button type="button" data-empf="unknown" class="active">?</button>
+          <button type="button" data-empf="yes">Ja</button>
+          <button type="button" data-empf="no">Nein</button>
+        </div>
       </div>
 
       <ul class="grades" id="gradeList"></ul>
@@ -45,8 +69,9 @@
 
       <div class="stats" id="stats" style="margin-top:0.85rem"></div>
       <p class="hint">
-        Links: gescannte Live-Note (nur Info). Rechts: <strong>editierbare Zeugnisnote</strong> (½, vorausgefüllt).
-        Leer lassen oder ✕ = noch keine Note. Ampel rechnet nur mit den Zeugnisnoten, erst wenn alle 6 gesetzt sind.
+        <strong>3. Klasse:</strong> Übertritt FMS/Gym.<br>
+        <strong>1./2. Klasse:</strong> Beförderung (§41) und Aufstieg (§45; Punkteformel je Klasse unterschiedlich).
+        Rechts: editierbare Zeugnisnote (½). ✕ = leer.
       </p>
     </section>
   </main>

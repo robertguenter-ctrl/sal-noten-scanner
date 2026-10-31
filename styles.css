@@ -119,18 +119,39 @@ button:disabled {
 .status.error { color: var(--fail); }
 .status.ok { color: var(--ok); }
 
+.mode-label {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: var(--accent);
+  font-weight: 650;
+}
+
+.toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem 0.75rem;
+  margin-bottom: 0.55rem;
+}
+
+.toggle-caption {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 650;
+}
+
 .level-toggle {
   display: inline-flex;
   gap: 4px;
   padding: 3px;
   border-radius: 10px;
   background: rgba(15, 23, 42, 0.55);
-  margin-bottom: 0.75rem;
 }
 
 .level-toggle button {
   min-height: 36px;
-  padding: 0.4rem 0.9rem;
+  padding: 0.4rem 0.75rem;
   background: transparent;
   color: var(--muted);
   font-size: 0.85rem;

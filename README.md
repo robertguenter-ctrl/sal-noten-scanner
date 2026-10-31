@@ -1,6 +1,9 @@
 # SAL Noten-Scanner (PWA)
 
-Handy-PWA: Kamera → OCR der SAL-Notenübersicht auf dem Laptop → Promotionscheck (Baselland Zug E/P).
+Handy-PWA: Kamera → OCR der SAL-Notenübersicht auf dem Laptop → BL-Laufbahncheck.
+
+- **3. Klasse:** Übertritt FMS/Gym (§§ 51/53)
+- **1./2. Klasse:** Beförderung (§§ 41–42) und Aufstieg Leistungszug (§ 45; Punkteformel je Klasse unterschiedlich)
 
 Schwesterprojekt zum Bookmarklet-Dashboard:
 [`sal-noten-dashboard`](https://github.com/robertguenter-ctrl/sal-noten-dashboard)
